@@ -1,22 +1,44 @@
-name: Build Package CI
+name: build rpm
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      NGINX_VERSION:
+        description: 'Nginxのバージョンを指定'
+        required: true
+        default: '1.21.1'
+      NGINX_RELEASE_NUMBER:
+        description: 'Nginxのリリース番号を指定(RPMのみ有効)'
+        required: false
+        default: '1'
+      NGX_MRUBY_VERSION:
+        description: 'ngx_mrubyのバージョンを指定'
+        required: true
+        default: '2.2.3'
+
+env:
+  NGINX_VERSION: ${{ github.event.inputs.NGINX_VERSION }}
+  NGX_MRUBY_VERSION: ${{ github.event.inputs.NGX_MRUBY_VERSION }}
+  RELEASE: ${{ github.event.inputs.NGINX_RELEASE_NUMBER }}
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        os: [centos7, ubuntu1804]
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Build package
-      run: docker-compose build ${{ matrix.os }}
+      - uses: actions/checkout@v2
+      - name: Build package
+        run: |
+          docker-compose up --build centos7
+          # echo "aaa" > ./nginx-${{ github.event.inputs.NGINX_VERSION }}-${{ github.event.inputs.NGINX_RELEASE_NUMBER }}.el7.ngx.x86_64.rpm
+          # ls -la
+          
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: nginx-${{ github.event.inputs.NGINX_VERSION }}-${{ github.event.inputs.NGX_MRUBY_VERSION }}
+          name: nginx-${{ github.event.inputs.NGINX_VERSION }}-${{ github.event.inputs.NGINX_RELEASE_NUMBER }}.el7.ngx.x86_64.rpm
+          files: ./nginx-${{ github.event.inputs.NGINX_VERSION }}-${{ github.event.inputs.NGINX_RELEASE_NUMBER }}.el7.ngx.x86_64.rpm
+          draft: false
+          prerelease: false
